@@ -1,0 +1,95 @@
+version: 2.1
+jobs:
+  preview_deployment:
+    docker:
+      - image: cimg/node:18.16.1-browsers
+    steps:
+      - checkout
+      - run: yarn install --frozen-lockfile
+      - run:
+          name: Install Vercel CLI
+          command: yarn global add vercel@latest
+      - save_cache:
+          key: dependency-cache-v2-{{ checksum "yarn.lock" }}
+          paths:
+            - ./node_modules
+            - ~/.cache/yarn
+      - run:
+          name: Pull Vercel Environment Information
+          command: vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+      - run:
+          name: Build Project Artifacts
+          command: vercel build --token=$VERCEL_TOKEN
+      - run:
+          name: Deploy Project Artifacts to Vercel
+          command: vercel deploy --prebuilt --token=$VERCEL_TOKEN
+
+  production_deployment:
+    docker:
+      - image: cimg/node:18.16.1-browsers
+    steps:
+      - checkout
+      - run: yarn install --frozen-lockfile
+      - run:
+          name: Install Vercel CLI
+          command: yarn global add vercel@latest
+      - save_cache:
+          key: dependency-cache-v2-{{ checksum "yarn.lock" }}
+          paths:
+            - ./node_modules
+            - ~/.cache/yarn
+      - run:
+          name: Pull Vercel Environment Information
+          command: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - run:
+          name: Build Project Artifacts
+          command: vercel build --prod --token=$VERCEL_TOKEN
+      - run:
+          name: Deploy Project Artifacts to Vercel
+          command: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
+  development_deployment:
+    docker:
+      - image: cimg/node:18.16.1-browsers
+    steps:
+      - checkout
+      - run: yarn install --frozen-lockfile
+      - run:
+          name: Install Vercel CLI
+          command: yarn global add vercel@latest
+      - save_cache:
+          key: dependency-cache-v2-{{ checksum "yarn.lock" }}
+          paths:
+            - ./node_modules
+            - ~/.cache/yarn
+      - run:
+          name: Pull Vercel Environment Information
+          command: vercel pull --yes --environment=development --token=$VERCEL_TOKEN
+      - run:
+          name: Show Environment Variables
+          command: cat .vercel/.env.development.local
+      - run:
+          name: Build Project Artifacts
+          command: vercel build --token=$VERCEL_TOKEN
+      - run:
+          name: Deploy Project Artifacts to Vercel
+          command: vercel deploy --prebuilt --token=$VERCEL_TOKEN
+
+workflows:
+  version: 2
+  preview_and_production:
+    jobs:
+      - preview_deployment:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /preview.*/
+      - production_deployment:
+          filters:
+            branches:
+              only: /main/
+      - development_deployment:
+          filters:
+            branches:
+              only: /development/
